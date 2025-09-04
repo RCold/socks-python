@@ -58,17 +58,17 @@ async def handle_tcp(reader: StreamReader, writer: StreamWriter) -> None:
             await send_response(writer, ReplyCode.REQUEST_REJECTED_OR_FAILED)
         except Exception:
             pass
-        raise SocksError(ErrorKind.COMMAND_NOT_SUPPORTED)
+        raise SocksError(ErrorKind.INVALID_COMMAND)
     port = int.from_bytes(await reader.readexactly(2))
     data = await reader.readexactly(4)
     _user_id = await reader.readuntil(b"\0")
     if data[:3] == bytes([0, 0, 0]) and data[3] != 0:
-        addr = (await reader.readuntil(b"\0"))[:-1].decode()
+        data = (await reader.readuntil(b"\0"))[:-1]
+        try:
+            addr = data.decode()
+        except Exception:
+            raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
         if not 1 <= len(addr) <= 255:
-            try:
-                await send_response(writer, ReplyCode.REQUEST_REJECTED_OR_FAILED)
-            except Exception:
-                pass
             raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
     else:
         addr = socket.inet_ntoa(data)

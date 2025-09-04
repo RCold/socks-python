@@ -28,11 +28,15 @@ class Address:
             n = (await reader.readexactly(1))[0]
             if n < 1:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
-            self.addr = (await reader.readexactly(n)).decode()
+            data = await reader.readexactly(n)
+            try:
+                self.addr = data.decode()
+            except Exception:
+                raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
         elif self.type == AddrType.IP_V6:
             self.addr = socket.inet_ntop(socket.AF_INET6, await reader.readexactly(16))
         else:
-            raise SocksError(ErrorKind.ADDRESS_TYPE_NOT_SUPPORTED)
+            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         self.port = int.from_bytes(await reader.readexactly(2))
 
     def write_to(self, writer: StreamWriter) -> None:
@@ -40,14 +44,14 @@ class Address:
         if self.type == AddrType.IP_V4:
             writer.write(socket.inet_aton(self.addr))
         elif self.type == AddrType.DOMAIN_NAME:
-            addr = self.addr.encode()
-            if not 1 <= len(addr) <= 255:
+            data = self.addr.encode()
+            if not 1 <= len(data) <= 255:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
-            writer.write(bytes([len(addr)]) + addr)
+            writer.write(bytes([len(data)]) + data)
         elif self.type == AddrType.IP_V6:
             writer.write(socket.inet_pton(socket.AF_INET6, self.addr))
         else:
-            raise SocksError(ErrorKind.ADDRESS_TYPE_NOT_SUPPORTED)
+            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         writer.write(self.port.to_bytes(2))
 
     def parse(self, reader: BytesIO) -> None:
@@ -58,15 +62,15 @@ class Address:
             n = reader.read(1)[0]
             if n < 1:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
-            addr = reader.read(n)
+            data = reader.read(n)
             try:
-                self.addr = addr.decode()
+                self.addr = data.decode()
             except Exception:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
         elif self.type == AddrType.IP_V6:
             self.addr = socket.inet_ntop(socket.AF_INET6, reader.read(16))
         else:
-            raise SocksError(ErrorKind.ADDRESS_TYPE_NOT_SUPPORTED)
+            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         self.port = int.from_bytes(reader.read(2))
 
     def pack(self) -> bytes:
@@ -74,13 +78,13 @@ class Address:
         if self.type == AddrType.IP_V4:
             blocks.append(socket.inet_aton(self.addr))
         elif self.type == AddrType.DOMAIN_NAME:
-            addr = self.addr.encode()
-            if not 1 <= len(addr) <= 255:
+            data = self.addr.encode()
+            if not 1 <= len(data) <= 255:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
-            blocks.append(bytes([len(addr)]) + addr)
+            blocks.append(bytes([len(data)]) + data)
         elif self.type == AddrType.IP_V6:
             blocks.append(socket.inet_pton(socket.AF_INET6, self.addr))
         else:
-            raise SocksError(ErrorKind.ADDRESS_TYPE_NOT_SUPPORTED)
+            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         blocks.append(self.port.to_bytes(2))
         return b"".join(blocks)

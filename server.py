@@ -37,4 +37,8 @@ if __name__ == "__main__":
         "-V", "--version", action="version", version=f"%(prog)s {__version__}"
     )
     args = parser.parse_args()
-    sys.exit(asyncio.run(socks.start_socks_server(args.bind, args.port)))
+    try:
+        sys.exit(asyncio.run(socks.start_socks_server(args.bind, args.port)))
+    except KeyboardInterrupt:
+        print("\nKeyboard interrupt received, exiting.")
+        sys.exit(130)

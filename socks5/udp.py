@@ -1,6 +1,5 @@
 import asyncio
 import socket
-import struct
 from asyncio import DatagramProtocol
 from io import BytesIO
 from ipaddress import IPv6Address
@@ -18,18 +17,11 @@ class UDPHeader:
         self.addr = addr
 
     def parse(self, reader: BytesIO) -> None:
-        try:
-            _rsv, self.frag = struct.unpack("!HB", reader.read(3))
-        except Exception:
-            raise SocksError(ErrorKind.INVALID_UDP_PACKET_RECEIVED)
+        _rsv = int.from_bytes(reader.read(2))
+        self.frag = reader.read(1)[0]
         if self.frag != 0:
             raise SocksError(ErrorKind.FRAGMENTATION_NOT_SUPPORTED)
-        try:
-            self.addr.parse(reader)
-        except SocksError:
-            raise
-        except Exception:
-            raise SocksError(ErrorKind.INVALID_UDP_PACKET_RECEIVED)
+        self.addr.parse(reader)
 
     def pack(self) -> bytes:
         return bytes([0, 0, self.frag]) + self.addr.pack()
@@ -53,6 +45,9 @@ class UDPProtocol(DatagramProtocol):
 async def handle_udp(session: UDPSession) -> None:
     loop = asyncio.get_event_loop()
     protocol = UDPProtocol(session)
+    resolve_cache: Dict[Tuple[str, int], Tuple] = {}
+    transport_v4 = None
+    transport_v6 = None
     try:
         transport_v4, _ = await loop.create_datagram_endpoint(
             lambda: protocol, ("0.0.0.0", 0)
@@ -60,7 +55,6 @@ async def handle_udp(session: UDPSession) -> None:
         transport_v6, _ = await loop.create_datagram_endpoint(
             lambda: protocol, ("::", 0)
         )
-        resolve_cache: Dict[Tuple[str, int], Tuple] = {}
         while True:
             data = await session.recv()
             if data is None:
@@ -69,20 +63,20 @@ async def handle_udp(session: UDPSession) -> None:
             header = UDPHeader()
             header.parse(reader)
             data = reader.read()
-            key = (header.addr.addr, header.addr.port)
-            if key in resolve_cache:
-                addr_info = resolve_cache[key]
+            sock_addr = (header.addr.addr, header.addr.port)
+            if sock_addr in resolve_cache:
+                addr_info = resolve_cache[sock_addr]
             else:
-                addr_info_list = await loop.getaddrinfo(
-                    header.addr.addr, header.addr.port
-                )
+                addr_info_list = await loop.getaddrinfo(*sock_addr)
                 if not addr_info_list:
                     raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
-                addr_info = resolve_cache[key] = addr_info_list[0]
+                addr_info = resolve_cache[sock_addr] = addr_info_list[0]
             if addr_info[0] == socket.AF_INET:
                 transport_v4.sendto(data, addr_info[4])
             elif addr_info[0] == socket.AF_INET6:
                 transport_v6.sendto(data, addr_info[4])
     finally:
-        transport_v4.close()
-        transport_v6.close()
+        if transport_v4 is not None:
+            transport_v4.close()
+        if transport_v6 is not None:
+            transport_v6.close()

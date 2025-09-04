@@ -1,8 +1,6 @@
 from asyncio import StreamReader, StreamWriter
 from enum import IntEnum
 
-from error import ErrorKind, SocksError
-
 
 class Method(IntEnum):
     NO_AUTHENTICATION_REQUIRED = 0x00
@@ -20,11 +18,12 @@ class Reply:
         await writer.drain()
 
 
-async def authenticate(reader: StreamReader, writer: StreamWriter) -> None:
+async def authenticate(reader: StreamReader, writer: StreamWriter) -> bool:
     n = (await reader.readexactly(1))[0]
     methods = await reader.readexactly(n)
     if Method.NO_AUTHENTICATION_REQUIRED in methods:
         await Reply(Method.NO_AUTHENTICATION_REQUIRED).write(writer)
+        return True
     else:
         await Reply(Method.NO_ACCEPTABLE_AUTH_METHODS).write(writer)
-        raise SocksError(ErrorKind.NO_ACCEPTABLE_AUTH_METHODS)
+        return False
