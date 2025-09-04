@@ -3,6 +3,7 @@ import logging
 import socket
 import sys
 from asyncio import StreamReader, StreamWriter
+from typing import Optional
 
 import socks4
 import socks5
@@ -37,7 +38,7 @@ async def client_connected_cb(reader: StreamReader, writer: StreamWriter) -> Non
     logger.debug(f"client {client_addr} disconnected")
 
 
-async def start_socks_server(host: str, port: int) -> int:
+async def start_socks_server(host: Optional[str], port: int) -> int:
     try:
         server = await asyncio.start_server(client_connected_cb, host, port)
     except Exception as err:
