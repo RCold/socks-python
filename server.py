@@ -4,7 +4,7 @@ from argparse import ArgumentParser, ArgumentTypeError
 
 import socks
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 def port_type(port_str: str) -> int:
