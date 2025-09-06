@@ -2,6 +2,7 @@ import socket
 from asyncio import StreamReader, StreamWriter
 from enum import IntEnum
 from io import BytesIO
+from ipaddress import IPv4Address, IPv6Address
 
 from error import ErrorKind, SocksError
 
@@ -13,11 +14,17 @@ class AddrType(IntEnum):
 
 
 class Address:
-    def __init__(
-        self, type: AddrType = AddrType.IP_V4, addr: str = "0.0.0.0", port: int = 0
-    ) -> None:
-        self.type = type
-        self.addr = addr
+    def __init__(self, addr: str = "0.0.0.0", port: int = 0) -> None:
+        try:
+            self.type = AddrType.IP_V4
+            self.addr = str(IPv4Address(addr))
+        except Exception:
+            try:
+                self.type = AddrType.IP_V6
+                self.addr = str(IPv6Address(addr))
+            except Exception:
+                self.type = AddrType.DOMAIN_NAME
+                self.addr = addr
         self.port = port
 
     async def read_from(self, reader: StreamReader) -> None:

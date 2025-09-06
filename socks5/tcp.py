@@ -3,7 +3,6 @@ import logging
 import socket
 from asyncio import StreamReader, StreamWriter
 from enum import IntEnum
-from ipaddress import IPv6Address
 from typing import Optional, Tuple
 
 import util
@@ -11,7 +10,7 @@ from error import ErrorKind, SocksError
 from util import UDPSession
 
 from . import auth, udp
-from .address import Address, AddrType
+from .address import Address
 
 logger = logging.getLogger(__name__)
 
@@ -56,14 +55,20 @@ class Request:
             raise SocksError(ErrorKind.VERSION_MISMATCH)
         self.cmd = Command((await reader.readexactly(1))[0])
         if self.cmd not in [Command.CONNECT, Command.BIND, Command.UDP_ASSOCIATE]:
-            await Reply(ReplyCode.COMMAND_NOT_SUPPORTED).write_to(writer)
+            try:
+                await Reply(ReplyCode.COMMAND_NOT_SUPPORTED).write_to(writer)
+            except Exception:
+                pass
             raise SocksError(ErrorKind.INVALID_COMMAND)
         _rsv = await reader.readexactly(1)
         try:
             await self.addr.read_from(reader)
         except SocksError as err:
             if err.kind == ErrorKind.INVALID_ADDRESS_TYPE:
-                await Reply(ReplyCode.ADDRESS_TYPE_NOT_SUPPORTED).write_to(writer)
+                try:
+                    await Reply(ReplyCode.ADDRESS_TYPE_NOT_SUPPORTED).write_to(writer)
+                except Exception:
+                    pass
             raise
 
 
@@ -122,11 +127,7 @@ async def handle_udp_associate(
             pass
         raise
     try:
-        bind_addr, bind_port = server.sockets[0].getsockname()[:2]
-        try:
-            addr = Address(AddrType.IP_V6, str(IPv6Address(bind_addr)), bind_port)
-        except Exception:
-            addr = Address(AddrType.IP_V4, bind_addr, bind_port)
+        addr = Address(*server.sockets[0].getsockname()[:2])
         await Reply(ReplyCode.SUCCEEDED, addr).write_to(writer)
         while await reader.read(16 * 1024):
             pass

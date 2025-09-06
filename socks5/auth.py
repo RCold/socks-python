@@ -9,21 +9,17 @@ class Method(IntEnum):
     NO_ACCEPTABLE_AUTH_METHODS = 0xFF
 
 
-class Reply:
-    def __init__(self, method: Method) -> None:
-        self.method = method
-
-    async def write(self, writer: StreamWriter) -> None:
-        writer.write(bytes([5, self.method]))
-        await writer.drain()
+async def send_response(writer: StreamWriter, method: Method) -> None:
+    writer.write(bytes([5, method]))
+    await writer.drain()
 
 
 async def authenticate(reader: StreamReader, writer: StreamWriter) -> bool:
     n = (await reader.readexactly(1))[0]
     methods = await reader.readexactly(n)
     if Method.NO_AUTHENTICATION_REQUIRED in methods:
-        await Reply(Method.NO_AUTHENTICATION_REQUIRED).write(writer)
+        await send_response(writer, Method.NO_AUTHENTICATION_REQUIRED)
         return True
     else:
-        await Reply(Method.NO_ACCEPTABLE_AUTH_METHODS).write(writer)
+        await send_response(writer, Method.NO_ACCEPTABLE_AUTH_METHODS)
         return False

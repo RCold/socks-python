@@ -64,11 +64,11 @@ async def handle_tcp(reader: StreamReader, writer: StreamWriter) -> None:
     _user_id = await reader.readuntil(b"\0")
     if data[:3] == bytes([0, 0, 0]) and data[3] != 0:
         data = (await reader.readuntil(b"\0"))[:-1]
+        if not 1 <= len(data) <= 255:
+            raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
         try:
             addr = data.decode()
         except Exception:
-            raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
-        if not 1 <= len(addr) <= 255:
             raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
     else:
         addr = socket.inet_ntoa(data)

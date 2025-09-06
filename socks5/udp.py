@@ -2,22 +2,21 @@ import asyncio
 import socket
 from asyncio import DatagramProtocol
 from io import BytesIO
-from ipaddress import IPv6Address
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from error import ErrorKind, SocksError
 from util import UDPSession
 
-from .address import Address, AddrType
+from .address import Address
 
 
 class UDPHeader:
-    def __init__(self, addr: Address = Address()) -> None:
+    def __init__(self, addr: Optional[Address] = None) -> None:
         self.frag = 0
-        self.addr = addr
+        self.addr = addr if addr is not None else Address()
 
     def parse(self, reader: BytesIO) -> None:
-        _rsv = int.from_bytes(reader.read(2))
+        _rsv = reader.read(2)
         self.frag = reader.read(1)[0]
         if self.frag != 0:
             raise SocksError(ErrorKind.FRAGMENTATION_NOT_SUPPORTED)
@@ -34,11 +33,7 @@ class UDPProtocol(DatagramProtocol):
     def datagram_received(self, data: bytes, addr: Tuple) -> None:
         if self._session.is_closing():
             return
-        try:
-            address = Address(AddrType.IP_V6, str(IPv6Address(addr[0])), addr[1])
-        except Exception:
-            address = Address(AddrType.IP_V4, addr[0], addr[1])
-        header = UDPHeader(address)
+        header = UDPHeader(Address(*addr[:2]))
         self._session.send(header.pack() + data)
 
 

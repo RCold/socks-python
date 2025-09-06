@@ -13,10 +13,9 @@ A minimal SOCKS server implementation written in Python
 - SOCKS5 connect is supported
 - SOCKS5 UDP associate is supported
 
-## Examples
+## Running
 
 ```bash
-#Run the server
 PYTHON_LOG=debug python3 server.py --bind 127.0.0.1 1080
 ```
 
