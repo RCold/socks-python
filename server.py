@@ -12,8 +12,8 @@ def port_type(port_str: str) -> int:
         port = int(port_str)
     except ValueError:
         raise ArgumentTypeError(f"invalid port number: {port_str}")
-    if not 1 <= port <= 0xFFFF:
-        raise ArgumentTypeError("port number should must be between 1 and 65535")
+    if not 1 <= port <= 65535:
+        raise ArgumentTypeError("the port number must be between 1 and 65535")
     return port
 
 
