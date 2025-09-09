@@ -47,19 +47,7 @@ class Address:
         self.port = int.from_bytes(await reader.readexactly(2))
 
     def write_to(self, writer: StreamWriter) -> None:
-        writer.write(bytes([self.type]))
-        if self.type == AddrType.IP_V4:
-            writer.write(socket.inet_aton(self.addr))
-        elif self.type == AddrType.DOMAIN_NAME:
-            data = self.addr.encode()
-            if not 1 <= len(data) <= 255:
-                raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
-            writer.write(bytes([len(data)]) + data)
-        elif self.type == AddrType.IP_V6:
-            writer.write(socket.inet_pton(socket.AF_INET6, self.addr))
-        else:
-            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
-        writer.write(self.port.to_bytes(2))
+        writer.write(self.pack())
 
     def parse(self, reader: BytesIO) -> None:
         self.type = AddrType(reader.read(1)[0])
