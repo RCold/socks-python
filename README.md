@@ -19,6 +19,10 @@ A minimal SOCKS server implementation written in Python
 PYTHON_LOG=debug python3 server.py --bind 127.0.0.1 1080
 ```
 
+## Important Notes
+
+This SOCKS server does not implement any authentication methods. Anyone connecting to this server has unrestricted access to your network. You should only use this server within a trusted private network (home LAN, VPN, etc.) or behind a firewall.
+
 ## License
 
 Licensed under MIT License ([LICENSE](LICENSE))
