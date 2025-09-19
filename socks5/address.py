@@ -74,7 +74,7 @@ class Address:
             blocks.append(socket.inet_aton(self.addr))
         elif self.type == AddrType.DOMAIN_NAME:
             data = self.addr.encode()
-            if not 1 <= len(data) <= 255:
+            if not data or len(data) > 255:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
             blocks.append(bytes([len(data)]) + data)
         elif self.type == AddrType.IP_V6:
