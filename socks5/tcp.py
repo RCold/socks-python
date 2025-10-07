@@ -53,14 +53,15 @@ class Request:
         ver = (await reader.readexactly(1))[0]
         if ver != 5:
             raise SocksError(ErrorKind.VERSION_MISMATCH)
-        self.cmd = Command((await reader.readexactly(1))[0])
-        if self.cmd not in [Command.CONNECT, Command.BIND, Command.UDP_ASSOCIATE]:
+        try:
+            self.cmd = Command((await reader.readexactly(1))[0])
+        except Exception:
             try:
                 await Reply(ReplyCode.COMMAND_NOT_SUPPORTED).write_to(writer)
             except Exception:
                 pass
             raise SocksError(ErrorKind.INVALID_COMMAND)
-        _rsv = await reader.readexactly(1)
+        _ = await reader.readexactly(1)
         try:
             await self.addr.read_from(reader)
         except SocksError as err:
@@ -127,8 +128,8 @@ async def handle_udp_associate(
             pass
         raise
     try:
-        addr = Address(*server.sockets[0].getsockname()[:2])
-        await Reply(ReplyCode.SUCCEEDED, addr).write_to(writer)
+        bind_addr = Address(*server.sockets[0].getsockname()[:2])
+        await Reply(ReplyCode.SUCCEEDED, bind_addr).write_to(writer)
         while await reader.read(16 * 1024):
             pass
     finally:

@@ -28,7 +28,10 @@ class Address:
         self.port = port
 
     async def read_from(self, reader: StreamReader) -> None:
-        self.type = AddrType((await reader.readexactly(1))[0])
+        try:
+            self.type = AddrType((await reader.readexactly(1))[0])
+        except Exception:
+            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         if self.type == AddrType.IP_V4:
             self.addr = socket.inet_ntoa(await reader.readexactly(4))
         elif self.type == AddrType.DOMAIN_NAME:
@@ -42,15 +45,16 @@ class Address:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
         elif self.type == AddrType.IP_V6:
             self.addr = socket.inet_ntop(socket.AF_INET6, await reader.readexactly(16))
-        else:
-            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         self.port = int.from_bytes(await reader.readexactly(2))
 
     def write_to(self, writer: StreamWriter) -> None:
         writer.write(self.pack())
 
     def parse(self, reader: BytesIO) -> None:
-        self.type = AddrType(reader.read(1)[0])
+        try:
+            self.type = AddrType(reader.read(1)[0])
+        except Exception:
+            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         if self.type == AddrType.IP_V4:
             self.addr = socket.inet_ntoa(reader.read(4))
         elif self.type == AddrType.DOMAIN_NAME:
@@ -64,8 +68,6 @@ class Address:
                 raise SocksError(ErrorKind.INVALID_DOMAIN_NAME)
         elif self.type == AddrType.IP_V6:
             self.addr = socket.inet_ntop(socket.AF_INET6, reader.read(16))
-        else:
-            raise SocksError(ErrorKind.INVALID_ADDRESS_TYPE)
         self.port = int.from_bytes(reader.read(2))
 
     def pack(self) -> bytes:

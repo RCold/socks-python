@@ -16,7 +16,7 @@ class UDPHeader:
         self.addr = addr if addr is not None else Address()
 
     def parse(self, reader: BytesIO) -> None:
-        _rsv = reader.read(2)
+        _ = reader.read(2)
         self.frag = reader.read(1)[0]
         if self.frag != 0:
             raise SocksError(ErrorKind.FRAGMENTATION_NOT_SUPPORTED)

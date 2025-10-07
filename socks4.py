@@ -52,8 +52,9 @@ async def handle_connect(
 
 
 async def handle_tcp(reader: StreamReader, writer: StreamWriter) -> None:
-    cmd = (await reader.readexactly(1))[0]
-    if cmd not in [Command.CONNECT, Command.BIND]:
+    try:
+        cmd = Command((await reader.readexactly(1))[0])
+    except Exception:
         try:
             await send_response(writer, ReplyCode.REQUEST_REJECTED_OR_FAILED)
         except Exception:
@@ -61,7 +62,7 @@ async def handle_tcp(reader: StreamReader, writer: StreamWriter) -> None:
         raise SocksError(ErrorKind.INVALID_COMMAND)
     port = int.from_bytes(await reader.readexactly(2))
     data = await reader.readexactly(4)
-    _user_id = await reader.readuntil(b"\0")
+    _ = await reader.readuntil(b"\0")
     if data[:3] == bytes([0, 0, 0]) and data[3] != 0:
         data = (await reader.readuntil(b"\0"))[:-1]
         if not data or len(data) > 255:
