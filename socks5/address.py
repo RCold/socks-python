@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2025 Yeuham Wang <rcold@rcold.name>
+
 import socket
 from asyncio import StreamReader, StreamWriter
 from enum import IntEnum

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2025 Yeuham Wang <rcold@rcold.name>
+
 import enum
 from enum import Enum
 
