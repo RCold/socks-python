@@ -65,7 +65,7 @@ class UDPSession:
     def __init__(self, transport: DatagramTransport, addr: Tuple) -> None:
         self._transport = transport
         self._addr = addr
-        self._queue: Queue[Optional[bytes]] = Queue(128)
+        self._queue: Queue[Optional[bytes]] = Queue(32)
 
     def send(self, data: bytes) -> None:
         if self._transport.is_closing():

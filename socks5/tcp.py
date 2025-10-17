@@ -50,7 +50,7 @@ class Reply:
 class Request:
     def __init__(self) -> None:
         self.cmd: Optional[Command] = None
-        self.addr = Address()
+        self.dst = Address()
 
     async def read_from(self, reader: StreamReader, writer: StreamWriter) -> None:
         ver = (await reader.readexactly(1))[0]
@@ -66,7 +66,7 @@ class Request:
             raise SocksError(ErrorKind.INVALID_COMMAND)
         _ = await reader.readexactly(1)
         try:
-            await self.addr.read_from(reader)
+            await self.dst.read_from(reader)
         except SocksError as err:
             if err.kind == ErrorKind.INVALID_ADDRESS_TYPE:
                 try:
@@ -122,8 +122,8 @@ async def handle_udp_associate(
         logger.debug(f"udp session for client {client_addr} closed")
 
     try:
-        bind_addr = writer.get_extra_info("sockname")[0]
-        server = await util.start_udp_server(client_connected_cb, (bind_addr, 0))
+        bind_ip = writer.get_extra_info("sockname")[0]
+        server = await util.start_udp_server(client_connected_cb, (bind_ip, 0))
     except Exception:
         try:
             await Reply(ReplyCode.GENERAL_SOCKS_SERVER_FAILURE).write_to(writer)
@@ -131,8 +131,8 @@ async def handle_udp_associate(
             pass
         raise
     try:
-        bind_addr = Address(*server.sockets[0].getsockname()[:2])
-        await Reply(ReplyCode.SUCCEEDED, bind_addr).write_to(writer)
+        bind = Address(*server.sockets[0].getsockname()[:2])
+        await Reply(ReplyCode.SUCCEEDED, bind).write_to(writer)
         while await reader.read(16 * 1024):
             pass
     finally:
@@ -150,12 +150,12 @@ async def handle_tcp(reader: StreamReader, writer: StreamWriter) -> None:
         return
     request = Request()
     await request.read_from(reader, writer)
-    remote_addr = util.format_addr(request.addr.addr, request.addr.port)
+    remote_addr = util.format_addr(request.dst.addr, request.dst.port)
     if request.cmd == Command.CONNECT:
         logger.info(
             f"socks5 connect request from client {client_addr} to tcp://{remote_addr} accepted"
         )
-        await handle_connect(reader, writer, request.addr.addr, request.addr.port)
+        await handle_connect(reader, writer, request.dst.addr, request.dst.port)
     elif request.cmd == Command.BIND:
         logger.info(
             f"socks5 bind request from client {client_addr} rejected: not implemented"
